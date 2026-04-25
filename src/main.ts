@@ -191,7 +191,6 @@ function renderBoothList(booths: any[], pincode: string) {
         resultsContainer.appendChild(card);
     });
 }
-}
 
 async function routeToBooth(lat: number, lng: number) {
     if (!liveLocation && !isTracking) {
