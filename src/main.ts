@@ -279,8 +279,42 @@ const i18n = {
 };
 
 // --- GEMINI AI ---
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const chatModel = "gemini-2.5-flash";
+const VITE_KEY = (import.meta as any).env.VITE_GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: VITE_KEY || "DUMMY_KEY" });
+const chatModel = "gemini-2.0-flash";
+
+console.log("VoteReady Initializing...");
+if (!VITE_KEY) console.warn("VITE_GEMINI_API_KEY missing - AI Chat will not function.");
+
+// --- ATTACH GLOBALS EARLY ---
+// This ensures that onclick handlers in index.html work immediately after the script loads.
+(window as any).setLang = setLang;
+(window as any).navigate = navigate;
+(window as any).triggerVote = triggerVote;
+(window as any).resetEVM = resetEVM;
+(window as any).sendChatMessage = sendChatMessage;
+(window as any).getDirections = getDirections;
+(window as any).toggleLiveTracking = toggleLiveTracking;
+(window as any).downloadICS = () => {
+    const r = state.reminder;
+    if (!r) return;
+    const start = new Date(r.time).toISOString().replace(/-|:|\.\d+/g, "");
+    const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${start}\nSUMMARY:Voting - VoteReady\nEND:VEVENT\nEND:VCALENDAR`;
+    const blob = new Blob([ics], {type: 'text/calendar'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'vote.ics'; a.click();
+};
+(window as any).handleReminder = (e: Event) => {
+    e.preventDefault();
+    state.reminder = { 
+        name: (document.getElementById('rem-name') as HTMLInputElement).value, 
+        time: (document.getElementById('rem-time') as HTMLInputElement).value 
+    };
+    localStorage.setItem('vr-rem', JSON.stringify(state.reminder));
+    (document.getElementById('reminder-form') as HTMLElement).style.display = 'none';
+    (document.getElementById('reminder-success') as HTMLElement).style.display = 'block';
+};
+
 
 // --- UTILS ---
 function updateUIStrings() {
@@ -537,30 +571,7 @@ function setLang(l: string) {
     initBooth();
 }
 
-// --- ATTACH GLOBALS ---
-Object.assign(window, {
-    setLang, navigate, triggerVote, resetEVM, sendChatMessage,
-    getDirections, toggleLiveTracking,
-    downloadICS: () => {
-        const r = state.reminder;
-        if (!r) return;
-        const start = new Date(r.time).toISOString().replace(/-|:|\.\d+/g, "");
-        const ics = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nDTSTART:${start}\nSUMMARY:Voting - VoteReady\nEND:VEVENT\nEND:VCALENDAR`;
-        const blob = new Blob([ics], {type: 'text/calendar'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = 'vote.ics'; a.click();
-    },
-    handleReminder: (e: Event) => {
-        e.preventDefault();
-        state.reminder = { 
-            name: (document.getElementById('rem-name') as HTMLInputElement).value, 
-            time: (document.getElementById('rem-time') as HTMLInputElement).value 
-        };
-        localStorage.setItem('vr-rem', JSON.stringify(state.reminder));
-        (document.getElementById('reminder-form') as HTMLElement).style.display = 'none';
-        (document.getElementById('reminder-success') as HTMLElement).style.display = 'block';
-    }
-});
+
 
 // --- INIT ---
 window.addEventListener('DOMContentLoaded', () => {
