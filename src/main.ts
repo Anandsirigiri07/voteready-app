@@ -75,7 +75,14 @@ async function updateRoute() {
         
         try {
             const url = `https://router.project-osrm.org/route/v1/driving/${liveLocation.lng},${liveLocation.lat};${destLocation.lng},${destLocation.lat}?overview=full&geometries=geojson`;
-            const res = await fetch(url);
+            
+            // Add a timeout to the fetch
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
             const data = await res.json();
             
             if (data.routes && data.routes.length > 0) {
@@ -89,9 +96,11 @@ async function updateRoute() {
                 const dist = (data.routes[0].distance / 1000).toFixed(1);
                 const duration = Math.round(data.routes[0].duration / 60);
                 document.getElementById('route-status')!.innerText = `${dist} km • ${duration} min drive`;
+            } else {
+                document.getElementById('route-status')!.innerText = 'No route found between these points.';
             }
         } catch (e) {
-            document.getElementById('route-status')!.innerText = 'Failed to load route.';
+            document.getElementById('route-status')!.innerText = 'Routing service unavailable. Please try again.';
         }
     } else if (liveLocation && !isTracking) {
         mapInstance.setView([liveLocation.lat, liveLocation.lng], 14);
@@ -193,13 +202,27 @@ function renderBoothList(booths: any[], pincode: string) {
 }
 
 async function routeToBooth(lat: number, lng: number) {
+    const originInput = (document.getElementById('origin-input') as HTMLInputElement).value.trim();
+    
+    if (originInput && !liveLocation) {
+        document.getElementById('route-info-view')!.style.display = 'block';
+        document.getElementById('route-status')!.innerText = 'Geocoding origin...';
+        const originCoords = await geocode(originInput);
+        if (originCoords) {
+            liveLocation = originCoords;
+        } else {
+            alert("Could not locate your origin address.");
+            document.getElementById('route-info-view')!.style.display = 'none';
+            return;
+        }
+    }
+
     if (!liveLocation && !isTracking) {
-        alert("Please enable GPS or enter your location first.");
+        alert("Please enable GPS or enter your location in 'My Location' field.");
         return;
     }
     destLocation = { lat, lng };
     updateRoute();
-    // Scroll to map
     document.getElementById('map')?.scrollIntoView({ behavior: 'smooth' });
 }
 
