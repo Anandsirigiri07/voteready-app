@@ -1,0 +1,6 @@
+{
+  "name": "VoteReady",
+  "description": "A comprehensive mobile web app for first-time Indian voters featuring a countdown, EVM simulator, booth locator, rights guide, and voting reminders.",
+  "requestFramePermissions": ["geolocation", "notifications"],
+  "majorCapabilities": []
+}
