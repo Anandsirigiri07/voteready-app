@@ -16,6 +16,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data:;">
     <title>VoteReady - India's 1st Time Voter Guide</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -311,6 +312,26 @@
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* FOCUS VISIBILITY — accessibility for keyboard users */
+        :focus-visible {
+            outline: 3px solid var(--primary);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        .vote-btn:focus-visible, .nav-item:focus-visible { outline-offset: 4px; }
+        .booth-card:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+        /* FORM STYLES */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+        .form-group input { width: 100%; padding: 14px; border-radius: 12px; border: 2px solid var(--border); font-family: 'Public Sans', sans-serif; font-weight: 600; font-size: 15px; outline: none; transition: border-color 0.2s; }
+        .form-group input:focus { border-color: var(--primary); }
+        .success-card { background: #ECFDF5; border: 2px solid #10B981; border-radius: 20px; padding: 24px; display: none; text-align: center; }
+        .success-card h3 { color: #065F46; font-size: 18px; font-weight: 900; margin: 0 0 8px; }
+
+        /* ALERT BANNER */
+        .alert-banner { border-radius: 99px; font-weight: 900; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -326,13 +347,13 @@
             </div>
         </header>
 
-        <div class="view-content">
+        <div class="view-content" role="main" id="view-content-region">
             <!-- VIEW: HOME -->
             <div id="view-home" class="view active">
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
                     <div>
                         <p id="label-election" style="font-size: 11px; font-weight: 950; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1.5px; margin-bottom: 4px;">Election Day</p>
-                        <h1 id="date-text" style="font-size: 30px; font-weight: 950; margin: 0; letter-spacing: -1px; line-height: 1;">April 15, 2026</h1>
+                        <h1 id="date-text" style="font-size: 30px; font-weight: 950; margin: 0; letter-spacing: -1px; line-height: 1;">Loading...</h1>
                     </div>
                     <div style="text-align: right;">
                         <span id="home-countdown" style="display: block; font-size: 36px; font-weight: 950; color: var(--primary); line-height: 0.9;">00</span>
@@ -439,10 +460,10 @@
                 <!-- Active Route View -->
                 <div class="card" id="route-info-view" style="border-left: 8px solid var(--accent); display: none; margin-bottom: 12px;">
                     <h3 id="route-title" style="margin: 0; font-size: 16px; font-weight: 900; color: var(--primary);">Route Details</h3>
-                    <p id="route-status" style="font-size: 14px; color: var(--text-muted); font-weight: 700; margin-bottom: 0;">Calculating route...</p>
+                    <p id="route-status" aria-live="polite" role="status" style="font-size: 14px; color: var(--text-muted); font-weight: 700; margin-bottom: 0;">Calculating route...</p>
                 </div>
                 
-                <div id="booth-results" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <div id="booth-results" aria-live="polite" aria-label="Booth search results" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
                     <!-- Booth list injected here -->
                 </div>
 
@@ -472,7 +493,11 @@
                     <p id="chat-sub" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Ask questions about voting, candidates, or technical help.</p>
                 </div>
                 
-                <div id="chat-messages" class="hide-scrollbar" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px;">
+                <div id="chat-chips" class="hide-scrollbar" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;flex-shrink:0;" aria-label="Quick questions" role="group">
+                    <!-- Chips injected by JS -->
+                </div>
+
+                <div id="chat-messages" class="hide-scrollbar" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px;" aria-live="polite" aria-label="Chat messages">
                     <div style="background: #F1F5F9; padding: 14px 18px; border-radius: 20px 20px 20px 4px; max-width: 85%; font-size: 14px; color: var(--primary); font-weight: 600; line-height: 1.5; align-self: flex-start;">
                         Hello! I am your AI Voting Assistant. How can I help you today?
                     </div>
@@ -507,25 +532,25 @@
             </div>
         </div>
 
-        <nav>
-            <div class="nav-item active" onclick="navigate('home')" id="nav-home">
-                <div class="indicator"></div>
+        <nav role="navigation" aria-label="Main navigation">
+            <div class="nav-item active" onclick="navigate('home')" id="nav-home" role="button" tabindex="0" aria-label="Go to Home" aria-current="page">
+                <div class="indicator" aria-hidden="true"></div>
                 <span id="nav-lbl-home">Home</span>
             </div>
-            <div class="nav-item" onclick="navigate('evm')" id="nav-evm">
-                <div class="indicator"></div>
+            <div class="nav-item" onclick="navigate('evm')" id="nav-evm" role="button" tabindex="0" aria-label="Go to EVM Trainer">
+                <div class="indicator" aria-hidden="true"></div>
                 <span id="nav-lbl-evm">EVM</span>
             </div>
-            <div class="nav-item" onclick="navigate('booth')" id="nav-booth">
-                <div class="indicator"></div>
+            <div class="nav-item" onclick="navigate('booth')" id="nav-booth" role="button" tabindex="0" aria-label="Go to Booth Locator">
+                <div class="indicator" aria-hidden="true"></div>
                 <span id="nav-lbl-booth">Booth</span>
             </div>
-            <div class="nav-item" onclick="navigate('rights')" id="nav-rights">
-                <div class="indicator"></div>
+            <div class="nav-item" onclick="navigate('rights')" id="nav-rights" role="button" tabindex="0" aria-label="Go to Know Your Rights">
+                <div class="indicator" aria-hidden="true"></div>
                 <span id="nav-lbl-rights">Rights</span>
             </div>
-            <div class="nav-item" onclick="navigate('chat')" id="nav-chat">
-                <div class="indicator"></div>
+            <div class="nav-item" onclick="navigate('chat')" id="nav-chat" role="button" tabindex="0" aria-label="Go to AI Chat">
+                <div class="indicator" aria-hidden="true"></div>
                 <span id="nav-lbl-chat">AI Chat</span>
             </div>
         </nav>
