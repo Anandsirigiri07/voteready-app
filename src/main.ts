@@ -1,5 +1,43 @@
 import { GoogleGenAI } from "@google/genai";
 import * as L from "leaflet";
+import "./index.css";
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { animate } from "motion";
+
+declare global {
+  interface Window {
+    setLang: (l: string) => void;
+    navigate: (view: string) => void;
+    triggerVote: (idx: number) => void;
+    resetEVM: () => void;
+    sendChatMessage: () => void;
+    findNearbyBooths: () => void;
+    routeToBooth: (lat: number, lng: number) => void;
+    toggleLiveTracking: () => void;
+    downloadICS: () => void;
+    handleReminder: (e: Event) => void;
+  }
+}
+
+// --- FIREBASE ANALYTICS SETUP ---
+const firebaseConfig = {
+  apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || "dummy-api-key",
+  authDomain: "voteready-app.firebaseapp.com",
+  projectId: "voteready-app",
+  storageBucket: "voteready-app.firebasestorage.app",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef",
+  measurementId: "G-123ABCDEF"
+};
+
+try {
+  const app = initializeApp(firebaseConfig);
+  getAnalytics(app);
+  console.log("Firebase Analytics initialized");
+} catch (e) {
+  console.warn("Firebase Analytics failed to initialize", e);
+}
 
 // --- UTILITIES ---
 
@@ -145,8 +183,8 @@ async function updateRoute() {
             const data = await res.json();
             
             if (data.routes && data.routes.length > 0) {
-                const coords = data.routes[0].geometry.coordinates.map((c: any) => [c[1], c[0]]);
-                routeLine = L.polyline(coords, { color: '#1A56DB', weight: 5 }).addTo(mapInstance);
+                const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+                routeLine = L.polyline(coords as L.LatLngExpression[], { color: '#1A56DB', weight: 5 }).addTo(mapInstance);
                 
                 if (!isTracking) {
                     mapInstance.fitBounds(routeLine.getBounds(), { padding: [30, 30] });
@@ -207,7 +245,7 @@ async function findNearbyBooths() {
         const res = await safeFetch(searchUrl);
         const data = await res.json();
 
-        let booths = data.map((el: any) => ({
+        let booths = data.map((el: { display_name: string; lat: string; lon: string; }) => ({
             name: el.display_name.split(',')[0] || "Polling Station",
             lat: parseFloat(el.lat),
             lng: parseFloat(el.lon),
@@ -234,11 +272,13 @@ async function findNearbyBooths() {
     }
 }
 
-function renderBoothList(booths: any[], pincode: string) {
+interface BoothData { name: string; lat: number; lng: number; address: string; }
+
+function renderBoothList(booths: BoothData[], pincode: string) {
     const resultsContainer = document.getElementById('booth-results')!;
     resultsContainer.innerHTML = `<p style="font-size: 12px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Found ${booths.length} Booths near ${escapeHtml(pincode)}</p>`;
     
-    booths.forEach((booth: any) => {
+    booths.forEach((booth: BoothData) => {
         const marker = L.marker([booth.lat, booth.lng], { icon: stationIcon })
             .addTo(mapInstance!)
             .bindPopup(`<b>${escapeHtml(booth.name)}</b><br>${escapeHtml(booth.address)}`);
@@ -436,15 +476,15 @@ if (!VITE_KEY) console.warn("VITE_GEMINI_API_KEY missing - AI Chat will not func
 
 // --- ATTACH GLOBALS EARLY ---
 // This ensures that onclick handlers in index.html work immediately after the script loads.
-(window as any).setLang = setLang;
-(window as any).navigate = navigate;
-(window as any).triggerVote = triggerVote;
-(window as any).resetEVM = resetEVM;
-(window as any).sendChatMessage = sendChatMessage;
-(window as any).findNearbyBooths = findNearbyBooths;
-(window as any).routeToBooth = routeToBooth;
-(window as any).toggleLiveTracking = toggleLiveTracking;
-(window as any).downloadICS = () => {
+window.setLang = setLang;
+window.navigate = navigate;
+window.triggerVote = triggerVote;
+window.resetEVM = resetEVM;
+window.sendChatMessage = sendChatMessage;
+window.findNearbyBooths = findNearbyBooths;
+window.routeToBooth = routeToBooth;
+window.toggleLiveTracking = toggleLiveTracking;
+window.downloadICS = () => {
     const r = state.reminder;
     if (!r) return;
     const start = new Date(r.time).toISOString().replace(/-|:|\.\d+/g, "");
@@ -453,7 +493,7 @@ if (!VITE_KEY) console.warn("VITE_GEMINI_API_KEY missing - AI Chat will not func
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'vote.ics'; a.click();
 };
-(window as any).handleReminder = (e: Event) => {
+window.handleReminder = (e: Event) => {
     e.preventDefault();
     state.reminder = { 
         name: (document.getElementById('rem-name') as HTMLInputElement).value, 
@@ -503,7 +543,12 @@ function updateUIStrings() {
 
 function navigate(view: string) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(`view-${view}`)?.classList.add('active');
+    const el = document.getElementById(`view-${view}`);
+    el?.classList.add('active');
+    
+    if (el) {
+        animate(el, { opacity: [0, 1], y: [10, 0] }, { duration: 0.4, ease: "easeOut" });
+    }
     
     document.querySelectorAll('.nav-item').forEach(n => {
         n.classList.remove('active');
@@ -572,12 +617,13 @@ async function sendChatMessage() {
         const text = response.text || "I'm sorry, I couldn't process that.";
         chatHistory.push({ role: 'model', parts: [{ text }] });
         updateMessage(loadingId, text);
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("AI Error:", error);
         let errorMsg = "Connection error. Please try again later.";
-        if (error.message?.includes("RESOURCE_EXHAUSTED") || error.status === 429) {
+        const err = error as Error & { status?: number };
+        if (err.message?.includes("RESOURCE_EXHAUSTED") || err.status === 429) {
             errorMsg = "API Quota exceeded. Please try again in a few minutes.";
-        } else if (error.message?.includes("API_KEY_INVALID")) {
+        } else if (err.message?.includes("API_KEY_INVALID")) {
             errorMsg = "Invalid API Key. Please check your .env configuration.";
         }
         chatHistory.pop(); // remove failed user message from history
@@ -718,12 +764,12 @@ function initBooth() {
     const list = document.getElementById('booth-checklist');
     if (!list) return;
     list.innerHTML = '';
-    const labelsMap: any = {
+    const labelsMap: Record<string, Record<string, string>> = {
         en: { voterId: 'Voter ID', aadhaar: 'Aadhaar', slip: 'Printed Slip', pen: 'Blue Pen', phone: 'Phone' },
         hi: { voterId: 'वोटर आईडी', aadhaar: 'आधार कार्ड', slip: 'प्रिंटेड पर्ची', pen: 'पेन', phone: 'फोन' }
     };
     const labels = labelsMap[state.lang];
-    Object.keys(state.progress).forEach((key: any) => {
+    Object.keys(state.progress).forEach((key: string) => {
         const chip = document.createElement('div');
         chip.className = `chip ${state.progress[key as keyof typeof state.progress] ? 'active' : ''}`;
         chip.innerHTML = `<div style="width: 8px; height: 8px; border-radius: 50%; background: ${state.progress[key as keyof typeof state.progress] ? 'white' : '#CBD5E1'}"></div>${labels[key]}`;
@@ -821,7 +867,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Chat Enter listener
     const chatInput = document.getElementById('chat-input');
     if (chatInput) {
-        chatInput.addEventListener('keypress', (e: any) => {
+        chatInput.addEventListener('keypress', (e: KeyboardEvent) => {
             if (e.key === 'Enter') sendChatMessage();
         });
     }
