@@ -1,262 +1,679 @@
-<!--
-  VOTEREADY FEATURE INDEX:
-  1. Design System (Geometric Balance): Line 35
-  2. Multi-language (EN/HI) Dictionary: Line 450
-  3. Feature 1: Home View (Countdown & Progress): Line 210
-  4. Feature 2: EVM Simulator (FIXED ReferenceError): Line 284
-  5. Feature 3: Booth Locator (Map Frame): Line 338
-  6. Feature 4: Know Your Rights (Accordions): Line 405
-  7. Feature 5: Voting Reminder (FIXED Logic): Line 470
-  8. Feature 6: Live Mock Results (NEW): Line 510
-  9. Navigation Logic (FIXED TypeError): Line 590
-  10. Language Switcher Logic: Line 620
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-eval' 'unsafe-inline' blob: data: https://*.googleapis.com https://*.firebaseio.com https://*.openstreetmap.org https://*.project-osrm.org wss://*; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.firebaseio.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; img-src 'self' data: https://*.openstreetmap.org https://raw.githubusercontent.com https://unpkg.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://nominatim.openstreetmap.org https://router.project-osrm.org; font-src 'self' https://fonts.gstatic.com;">
-    <title>VoteReady - India's 1st Time Voter Guide</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; frame-src *; img-src * data: blob:; script-src * 'unsafe-inline' 'unsafe-eval'; style-src * 'unsafe-inline';">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <title>VoteReady India — India's #1 First-Time Voter Guide</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href='data:application/json,{"name":"VoteReady India","short_name":"VoteReady","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#1a56db"}'>
+    <meta name="theme-color" content="#1a56db">
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Maps (Open Source Alternative) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-dark: #1e429f;
+            --secondary: #f3f4f6;
+            --accent: #ff5a1f;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --bg-white: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Poppins', 'Noto Sans Devanagari', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--secondary);
+            color: var(--text-main);
+            line-height: 1.5;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--primary);
+            color: white;
+            padding: 8px;
+            z-index: 100;
+            transition: top 0.3s;
+        }
+
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* Layout */
+        .app-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: var(--bg-white);
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-white);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Hero Section */
+        .hero {
+            height: auto;
+            min-height: calc(100vh - 120px);
+            padding: 24px 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-bottom-left-radius: 24px;
+            border-bottom-right-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .hero h1 {
+            font-size: 2rem;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .countdown-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            padding: 16px;
+            border-radius: var(--radius);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            text-align: center;
+        }
+
+        .countdown-item span {
+            display: block;
+        }
+
+        .countdown-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .countdown-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        /* Bottom Nav */
+        nav.bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 500px;
+            background: var(--bg-white);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 8px;
+            border-top: 1px solid #e5e7eb;
+            z-index: 100;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.7rem;
+            flex: 1;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 4px;
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item i {
+            font-size: 1.25rem;
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding-bottom: 80px; /* Space for nav */
+        }
+
+        .section {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-white);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid #f3f4f6;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border-radius: 99px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: var(--transition);
+            width: 100%;
+            font-size: 1rem;
+            min-height: 44px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        /* Accessibility: Focus visible */
+        button:focus-visible, a:focus-visible, input:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        /* Bilingual Toggle */
+        .lang-toggle {
+            background: #f3f4f6;
+            border-radius: 99px;
+            padding: 4px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .lang-btn {
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+        }
+
+        .lang-btn.active {
+            background: var(--bg-white);
+            color: var(--primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Map & Booth Styles */
+        #map { 
+            height: 380px; 
+            width: 100%; 
+            border-radius: 16px;
+            z-index: 1;
+            border: 1px solid #e2e8f0;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+        }
+        .search-pane {
+            background: white;
+            padding: 8px;
+            border-radius: 99px;
+            display: flex;
+            gap: 8px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+            border: 1px solid #f1f5f9;
+        }
+        .search-pane input {
+            border: none;
+            flex: 1;
+            padding: 8px 20px;
+            outline: none;
+            font-size: 0.95rem;
+            background: transparent;
+        }
+        .search-pane button {
+            width: auto;
+            border-radius: 99px;
+            padding: 8px 24px;
+            font-size: 0.85rem;
+        }
+        .leaflet-container {
+            background: #f8fafc !important;
+            border-radius: 16px;
+        }
+
+        /* EVM Simulator */
+        .evm-machine {
+            background: #e5e7eb;
+            padding: 16px;
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .evm-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #9ca3af;
+        }
+
+        .evm-row.voted {
+            border-left-color: #10b981;
+        }
+
+        .evm-btn {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            border-radius: 4px;
+            border: 2px solid #1e3a8a;
+            cursor: pointer;
+        }
+
+        .evm-btn:active {
+            transform: scale(0.9);
+            background: #1e3a8a;
+        }
+
+        /* Chat UI */
+        .chat-container {
+            height: calc(100vh - 250px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.9rem;
+        }
+
+        .msg-bot {
+            align-self: flex-start;
+            background: #f3f4f6;
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+            padding: 12px 0;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 99px;
+            border: 1px solid #d1d5db;
+            outline: none;
+        }
+
+        /* Test Panel */
+        #test-panel {
+            background: #111827;
+            color: #10b981;
+            padding: 20px;
+            font-family: monospace;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        /* Animations */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Alerts */
+        .success-banner {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            text-align: center;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
-    <div id="app">
+    <a href="#main-content" class="skip-link">Skip to content</a>
+
+    <div class="app-container">
         <header>
             <div class="logo">
-                <div style="background: var(--primary); color: white; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center;">V</div>
-                VoteReady <span id="logo-country" style="color: var(--accent); font-weight: 500; font-size: 14px;">India</span>
+                <span aria-hidden="true">🗳️</span>
+                <span>VoteReady India</span>
             </div>
-            <div class="lang-switch">
-                <div class="lang-btn active" id="lang-en" onclick="setLang('en')">EN</div>
-                <div class="lang-btn" id="lang-hi" onclick="setLang('hi')">HI</div>
+            <div class="lang-toggle" role="radiogroup" aria-label="Language Selector">
+                <button id="lang-en" class="lang-btn active" onclick="switchLanguage('en')" aria-checked="true" role="radio">EN</button>
+                <button id="lang-hi" class="lang-btn" onclick="switchLanguage('hi')" aria-checked="false" role="radio">हिंदी</button>
             </div>
         </header>
 
-        <div class="view-content" role="main" id="view-content-region">
-            <!-- VIEW: HOME -->
-            <div id="view-home" class="view active">
-                <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
-                    <div>
-                        <p id="label-election" style="font-size: 11px; font-weight: 950; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1.5px; margin-bottom: 4px;">Election Day</p>
-                        <h1 id="date-text" style="font-size: 30px; font-weight: 950; margin: 0; letter-spacing: -1px; line-height: 1;">Loading...</h1>
+        <main id="main-content" role="main">
+            <!-- Section: Home -->
+            <section id="home" class="section active">
+                <div class="hero">
+                    <h1 data-t="hero_title">India's #1 First-Time Voter Guide</h1>
+                    <p data-t="hero_sub">Find your booth, understand EVMs, and vote with confidence.</p>
+                    
+                    <div class="countdown-container" aria-live="polite">
+                        <div class="countdown-item">
+                            <span class="countdown-val" id="days">00</span>
+                            <span class="countdown-label" data-t="days">Days</span>
+                        </div>
+                        <div class="countdown-item">
+                            <span class="countdown-val" id="hours">00</span>
+                            <span class="countdown-label" data-t="hours">Hours</span>
+                        </div>
+                        <div class="countdown-item">
+                            <span class="countdown-val" id="mins">00</span>
+                            <span class="countdown-label" data-t="mins">Mins</span>
+                        </div>
                     </div>
-                    <div style="text-align: right;">
-                        <span id="home-countdown" style="display: block; font-size: 36px; font-weight: 950; color: var(--primary); line-height: 0.9;">00</span>
-                        <span id="label-days-to-go" style="font-size: 10px; font-weight: 900; text-transform: uppercase; color: var(--text-muted);">Days To Go</span>
-                    </div>
+                    
+                    <button class="btn btn-primary pulse" onclick="navigateTo('booth')" data-t="cta_find_booth" aria-label="Find My Polling Booth">Find My Polling Booth</button>
                 </div>
 
-                <div class="card progress-card" style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px;">
-                    <div style="position: relative; display: grid; place-items: center;">
-                        <svg class="circle-svg">
-                            <circle class="circle-bg" cx="28" cy="28" r="24"></circle>
-                            <circle id="prog-circle" class="circle-val" cx="28" cy="28" r="24" stroke-dasharray="150.8" stroke-dashoffset="150.8"></circle>
-                        </svg>
-                        <div id="prog-text" style="position: absolute; font-weight: 950; font-size: 12px;">0%</div>
+                <div class="card" style="margin-top:20px;">
+                    <h3 data-t="live_trends_title">Live Election Trends</h3>
+                    <div id="trends-chart" style="height:200px; display:flex; align-items:flex-end; gap:10px; padding-top:20px;" aria-label="Live Election Trends Chart">
+                        <!-- Bars injected by JS -->
                     </div>
-                    <div>
-                        <h3 id="txt-prog-title" style="font-size: 16px; font-weight: 900; color: var(--primary-dark); margin: 0;">Almost Voter Ready!</h3>
-                        <p id="txt-prog-sub" style="font-size: 11px; color: var(--primary); opacity: 0.8; margin: 4px 0 0;">Update your booth checklist</p>
+                    <p style="font-size:0.8rem; color:var(--text-muted); margin-top:12px;" data-t="trends_mock_msg">Mock data based on exit polls.</p>
+                </div>
+            </section>
+
+            <!-- Section: News -->
+            <section id="news" class="section">
+                <h2 data-t="news_title">Election Updates</h2>
+                <div id="news-container">
+                    <!-- Injected by JS -->
+                    <div class="msg msg-bot" style="max-width:100%;" data-t="loading_news">Loading latest updates...</div>
+                </div>
+            </section>
+
+            <!-- Section: Guide (Form 6) -->
+            <section id="guide" class="section">
+                <div class="card" style="background:#0f172a; color:white; border:none; min-height:400px; display:flex; flex-direction:column;">
+                    <div id="guide-wizard">
+                        <!-- Injected by JS -->
                     </div>
+                </div>
+            </section>
+
+            <!-- Section: EVM Trainer -->
+            <section id="evm" class="section">
+                <h2 data-t="evm_title">EVM Trainer</h2>
+                <div class="card">
+                    <p data-t="evm_desc">Practice voting on our interactive Electronic Voting Machine simulator.</p>
+                    <div class="evm-machine" id="evm-simulator">
+                        <!-- EVM Rows injected by JS -->
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 data-t="how_to_vote">How to Vote (Official Guide)</h3>
+                    <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;">
+                        <iframe id="evm-video" width="560" height="315" src="about:blank" data-src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Booth Finder -->
+            <section id="booth" class="section">
+                <div style="text-align:center; margin-bottom:24px;">
+                    <h2 style="font-size:1.5rem; margin:0 0 8px 0;" data-t="booth_title">Find Your Booth</h2>
+                    <p style="color:var(--text-muted); font-size:0.9rem;">Visual guide to polling areas and booth verification.</p>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
-                    <button class="card" style="margin: 0; padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; border-width: 2px; text-align: left;" onclick="navigate('booth')">
-                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #FEF3C7; color: #D97706; display: grid; place-items: center; font-size: 16px;">📍</div>
-                        <span id="btn-booth" style="font-weight: 900; font-size: 12px; text-transform: uppercase;">Find Booth</span>
-                    </button>
-                    <button class="card" style="margin: 0; padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; border: 2px solid var(--primary); background: #EFF6FF;" onclick="navigate('evm')">
-                        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--primary); color: white; display: grid; place-items: center; font-weight: 900; font-style: italic; font-size: 16px;">E</div>
-                        <span id="btn-evm" style="font-weight: 900; font-size: 12px; text-transform: uppercase;">Train EVM</span>
-                    </button>
-                    <button class="card" style="margin: 0; padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; text-align: left;" onclick="navigate('rights')">
-                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #F1F5F9; color: var(--text-muted); display: grid; place-items: center; font-size: 16px;">⚖️</div>
-                        <span id="btn-rights" style="font-weight: 900; font-size: 12px; text-transform: uppercase;">My Rights</span>
-                    </button>
-                    <button class="card" style="margin: 0; padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; text-align: left;" onclick="navigate('results')">
-                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #F1F5F9; color: var(--text-muted); display: grid; place-items: center; font-size: 16px;">📊</div>
-                        <span id="btn-results" style="font-weight: 900; font-size: 12px; text-transform: uppercase;">Results</span>
-                    </button>
-                    <button class="card" style="margin: 0; padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; text-align: left;" onclick="navigate('chat')">
-                        <div style="width: 32px; height: 32px; border-radius: 8px; background: #1A56DB; color: white; display: grid; place-items: center; font-size: 16px;">✦</div>
-                        <span id="btn-chat" style="font-weight: 900; font-size: 12px; text-transform: uppercase;">AI Guide</span>
-                    </button>
+                <div class="search-pane">
+                    <input type="text" id="booth-search" placeholder="Enter city, area or landmark..." data-t-placeholder="search_placeholder">
+                    <button class="btn btn-primary" onclick="searchBooth()" data-t="search_btn">Search</button>
                 </div>
 
-                <div style="margin-bottom: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <h4 id="label-news-feed" style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1.5px; margin: 0;">Live News Feed</h4>
-                        <span class="alert-banner" style="background: #FEE2E2; color: #EF4444; font-size: 8px; padding: 4px 8px;">Simulated</span>
-                    </div>
-                    <div id="home-news-container" class="hide-scrollbar" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px;">
-                        <!-- News injected by JS -->
-                    </div>
-                </div>
-
-                <div class="card" style="background: var(--frame-border); color: white; border: none; margin: 0; position: relative; overflow: hidden; border-radius: 24px;">
-                    <div style="position: relative; z-index: 10;">
-                        <p id="label-reminder" style="font-size: 10px; font-weight: 900; opacity: 0.5; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Action Required</p>
-                        <h4 id="reminder-box-title" style="font-size: 16px; font-weight: 800; margin: 0 0 8px;">Never miss your slot</h4>
-                        <button class="btn btn-accent" style="width: auto; font-size: 11px; padding: 8px 16px;" onclick="navigate('reminder')">Set Alert</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW: EVM -->
-            <div id="view-evm" class="view">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h2 id="evm-title" style="font-size: 26px; font-weight: 950; margin: 0; letter-spacing: -1px;">EVM Trainer</h2>
-                    <div id="led-panel" style="background: #334155; padding: 10px 16px; border-radius: 99px; display: flex; gap: 10px; align-items: center;">
-                        <div id="led-ready" style="width: 10px; height: 10px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 10px #22C55E;"></div>
-                        <div id="led-busy" style="width: 10px; height: 10px; border-radius: 50%; background: #EF4444; opacity: 0.2;"></div>
-                    </div>
-                </div>
+                <div id="map"></div>
                 
-                <div class="evm-machine">
-                    <div style="background: #1E293B; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: #64748B; font-weight: 900; font-size: 10px; letter-spacing: 3px;">BALLOTING UNIT BU-01-2026</span>
-                    </div>
-                    <div id="evm-list"><!-- Injected --></div>
-                </div>
-
-                <div style="margin-top: 40px; text-align: center;">
-                    <div id="evm-msg" style="font-weight: 900; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px;">Machine Ready</div>
-                    <button class="btn" onclick="resetEVM()" id="reset-btn" style="display: none; border: 2px solid var(--primary); color: var(--primary); background: transparent;">Simulation Complete: Reset</button>
-                </div>
-            </div>
-
-            <!-- VIEW: BOOTH -->
-            <div id="view-booth" class="view">
-                <h1 id="booth-title" style="font-size: 28px; font-weight: 950; margin: 0 0 16px; letter-spacing: -1px;">Directions</h1>
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="origin-input" placeholder="My Location (e.g. Bengaluru)" style="flex-grow: 1; padding: 12px; border-radius: 12px; border: 2px solid #E2E8F0; font-weight: 600; outline: none; font-family: 'Public Sans', sans-serif;">
-                        <button class="btn" style="width: auto; padding: 12px 16px; background: #F1F5F9; color: var(--text-muted); border: 2px solid #E2E8F0;" id="live-track-btn" onclick="toggleLiveTracking()" title="Live Track GPS">📍</button>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="text" id="pincode-input" placeholder="Pincode or Area (e.g. 560001)" style="flex-grow: 1; padding: 12px; border-radius: 12px; border: 2px solid #E2E8F0; font-weight: 600; outline: none; font-family: 'Public Sans', sans-serif;">
-                        <button class="btn btn-primary" style="width: auto; padding: 12px 16px;" onclick="findNearbyBooths()">Find Booths</button>
-                    </div>
-                </div>
-                <div class="card" style="padding: 0; height: 240px; overflow: hidden; position: relative; border-radius: 20px; margin-bottom: 12px;">
-                    <div id="map" style="width:100%; height:100%; background: #E2E8F0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--text-muted); z-index: 1;">Search to view map</div>
-                </div>
-                
-                <!-- Active Route View -->
-                <div class="card" id="route-info-view" style="border-left: 8px solid var(--accent); display: none; margin-bottom: 12px;">
-                    <h3 id="route-title" style="margin: 0; font-size: 16px; font-weight: 900; color: var(--primary);">Route Details</h3>
-                    <p id="route-status" aria-live="polite" role="status" style="font-size: 14px; color: var(--text-muted); font-weight: 700; margin-bottom: 0;">Calculating route...</p>
-                </div>
-                
-                <div id="booth-results" aria-live="polite" aria-label="Booth search results" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
-                    <!-- Booth list injected here -->
-                </div>
-
-                <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px;" class="hide-scrollbar" id="booth-checklist"></div>
-            </div>
-
-            <!-- VIEW: RIGHTS -->
-            <div id="view-rights" class="view">
-                <h2 id="rights-title" style="font-size: 28px; font-weight: 950; margin: 0 0 24px; letter-spacing: -1px;">My Rights</h2>
-                <div id="rights-container"></div>
-            </div>
-
-            <!-- VIEW: RESULTS (NEW) -->
-            <div id="view-results" class="view">
-                <h2 id="results-title" style="font-size: 28px; font-weight: 950; margin: 0 0 10px; letter-spacing: -1px;">Live Trends</h2>
-                <p id="results-sub" style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">Sample simulation data based on practice votes.</p>
-                
-                <div id="results-list" class="space-y-6">
-                    <!-- Injected -->
-                </div>
-            </div>
-
-            <!-- VIEW: CHAT (NEW AI ASSISTANT) -->
-            <div id="view-chat" class="view" style="display: flex; flex-direction: column; height: calc(100vh - 120px); max-height: 800px;">
-                <div style="flex-shrink: 0; margin-bottom: 24px;">
-                    <h2 id="chat-title" style="font-size: 28px; font-weight: 950; margin: 0 0 4px; letter-spacing: -1px;">VoteGuide AI</h2>
-                    <p id="chat-sub" style="font-size: 13px; color: var(--text-muted); font-weight: 600;">Ask questions about voting, candidates, or technical help.</p>
-                </div>
-                
-                <div id="chat-chips" class="hide-scrollbar" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;flex-shrink:0;" aria-label="Quick questions" role="group">
-                    <!-- Chips injected by JS -->
-                </div>
-
-                <div id="chat-messages" class="hide-scrollbar" style="flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px;" aria-live="polite" aria-label="Chat messages">
-                    <div style="background: #F1F5F9; padding: 14px 18px; border-radius: 20px 20px 20px 4px; max-width: 85%; font-size: 14px; color: var(--primary); font-weight: 600; line-height: 1.5; align-self: flex-start;">
-                        Hello! I am your AI Voting Assistant. How can I help you today?
-                    </div>
-                </div>
-
-                <div style="flex-shrink: 0; padding-top: 16px; border-top: 1px solid #E2E8F0; display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="chat-input" placeholder="Type your question..." style="flex-grow: 1; padding: 14px 20px; border-radius: 99px; border: 2px solid #E2E8F0; font-size: 14px; font-weight: 600; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='#E2E8F0'">
-                    <button id="send-chat-btn" onclick="sendChatMessage()" style="width: 48px; height: 48px; border-radius: 50%; background: var(--primary); color: white; border: none; display: grid; place-items: center; cursor: pointer; transition: transform 0.1s active;" onmousedown="this.style.transform='scale(0.95)'" onmouseup="this.style.transform='scale(1)'">
-                        <span style="font-size: 20px;">✦</span>
+                <div style="display:flex; justify-content:center; margin:16px 0;">
+                    <button class="btn btn-outline" style="width:auto; gap:8px;" onclick="getLocation()">
+                        <span aria-hidden="true">📍</span> <span data-t="use_location">Use My Current Location</span>
                     </button>
                 </div>
-            </div>
 
-            <!-- VIEW: REMINDER -->
-            <div id="view-reminder" class="view">
-                <h1 id="rem-title" style="font-size: 28px; font-weight: 950; margin: 0 0 28px; letter-spacing: -1px;">Set Voting Alert</h1>
-                <form id="reminder-form" onsubmit="handleReminder(event)">
-                    <div class="form-group">
-                        <label id="lbl-name">Your Full Name</label>
-                        <input type="text" id="rem-name" placeholder="John" required>
+                <div id="booth-info" aria-live="polite">
+                    <div class="card" style="text-align:center; padding:30px; border:1px dashed #cbd5e1; background:#f8fafc;">
+                        <p style="margin:0; color:#64748b; font-size:0.85rem;">Area details and official links will appear here.</p>
                     </div>
-                    <div class="form-group">
-                        <label id="lbl-time">Reminder Date & Time</label>
-                        <input type="datetime-local" id="rem-time" value="2026-04-15T07:30" required>
-                    </div>
-                    <button type="submit" id="btn-save-rem" class="btn btn-primary">Lock Reminder</button>
-                </form>
-                <div id="reminder-success" class="success-card">
-                    <h3 id="txt-rem-ok">Reminder Active!</h3>
-                    <button onclick="downloadICS()" class="btn" style="background: white; color: var(--primary); border: 2px solid var(--primary); margin-top: 15px;">Add to Calendar (.ics)</button>
                 </div>
-            </div>
-        </div>
 
-        <nav role="navigation" aria-label="Main navigation">
-            <div class="nav-item active" onclick="navigate('home')" id="nav-home" role="button" tabindex="0" aria-label="Go to Home" aria-current="page">
-                <div class="indicator" aria-hidden="true"></div>
-                <span id="nav-lbl-home">Home</span>
-            </div>
-            <div class="nav-item" onclick="navigate('evm')" id="nav-evm" role="button" tabindex="0" aria-label="Go to EVM Trainer">
-                <div class="indicator" aria-hidden="true"></div>
-                <span id="nav-lbl-evm">EVM</span>
-            </div>
-            <div class="nav-item" onclick="navigate('booth')" id="nav-booth" role="button" tabindex="0" aria-label="Go to Booth Locator">
-                <div class="indicator" aria-hidden="true"></div>
-                <span id="nav-lbl-booth">Booth</span>
-            </div>
-            <div class="nav-item" onclick="navigate('rights')" id="nav-rights" role="button" tabindex="0" aria-label="Go to Know Your Rights">
-                <div class="indicator" aria-hidden="true"></div>
-                <span id="nav-lbl-rights">Rights</span>
-            </div>
-            <div class="nav-item" onclick="navigate('chat')" id="nav-chat" role="button" tabindex="0" aria-label="Go to AI Chat">
-                <div class="indicator" aria-hidden="true"></div>
-                <span id="nav-lbl-chat">AI Chat</span>
-            </div>
+                <div class="card" style="margin-top:24px; background:#eff6ff; border:1px solid #bfdbfe; display:flex; align-items:center; gap:16px; padding:20px;">
+                    <div style="font-size:1.8rem;">🏛️</div>
+                    <div style="flex:1;">
+                        <h4 style="margin:0; font-size:1rem; color:#1e3a8a;">ECI Official Search</h4>
+                        <p style="margin:4px 0 0 0; font-size:0.8rem; color:#1e40af; line-height:1.4;">Final booth and serial number verification must be done via the official ECI portal.</p>
+                    </div>
+                    <button class="btn" style="width:auto; padding:10px 20px; font-size:0.8rem; background:#1e40af; color:white;" onclick="window.open('https://electoralsearch.eci.gov.in/', '_blank')">Verify →</button>
+                </div>
+            </section>
+
+            <!-- Section: Rights -->
+            <section id="rights" class="section">
+                <h2 data-t="rights_title">Your Voter Rights</h2>
+                <div id="rights-list">
+                    <!-- Injected by JS -->
+                </div>
+            </section>
+
+            <!-- Section: AI Chat -->
+            <section id="chat" class="section">
+                <h2 data-t="chat_title">VoteGuide AI</h2>
+                <div class="card chat-container">
+                    <div class="chat-messages" id="chat-messages" aria-live="polite">
+                        <div class="msg msg-bot" data-t="chat_welcome">Namaste! I'm your VoteGuide AI. How can I help you today?</div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="user-input" class="chat-input" placeholder="Ask about voting rights..." data-t-placeholder="chat_placeholder" aria-label="Ask a question">
+                        <button id="send-btn" class="btn btn-primary" style="width:auto;" onclick="sendAIQuery()" aria-label="Send message">Send</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Reminder (Part of Home/Global) -->
+            <section id="reminder" class="section">
+                <h2 data-t="reminder_title">Voting Alert</h2>
+                <div class="card">
+                    <p data-t="reminder_desc">Set a reminder for election day so you don't miss your chance to vote.</p>
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        <button class="btn btn-primary" onclick="addToCalendar()" data-t="add_google_calendar" aria-label="Add to Google Calendar">Add to Google Calendar</button>
+                        <button class="btn btn-outline" onclick="downloadICS()" data-t="download_ics" aria-label="Download ICS File">Download .ics File</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <nav class="bottom-nav" role="navigation">
+            <button class="nav-item active" onclick="navigateTo('home')" id="nav-home" aria-label="Home">
+                <i aria-hidden="true">🏠</i>
+                <span data-t="nav_home">Home</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('evm')" id="nav-evm" aria-label="EVM Trainer">
+                <i aria-hidden="true">📟</i>
+                <span data-t="nav_evm">EVM</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('booth')" id="nav-booth" aria-label="Booth Finder">
+                <i aria-hidden="true">📍</i>
+                <span data-t="nav_booth">Booth</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('rights')" id="nav-rights" aria-label="Voter Rights">
+                <i aria-hidden="true">⚖️</i>
+                <span data-t="nav_rights">Rights</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('chat')" id="nav-chat" aria-label="AI Chat">
+                <i aria-hidden="true">💬</i>
+                <span data-t="nav_chat">AI Chat</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('news')" id="nav-news" aria-label="Election News">
+                <i aria-hidden="true">📰</i>
+                <span data-t="nav_news">News</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('guide')" id="nav-guide" aria-label="Voter Guide">
+                <i aria-hidden="true">📝</i>
+                <span data-t="nav_guide">Guide</span>
+            </button>
         </nav>
 
-        <!-- VVPAT OVERLAY -->
-        <div id="vvpat">
-            <div class="vvpat-paper">
-                <div style="border-bottom: 2px dashed #eee; font-size: 8px; margin-bottom: 15px; font-weight: 900; color: #94A3B8;">SLIP #4492-BX</div>
-                <div id="vv-name" style="font-size: 16px; font-weight: 950;">CANDIDATE</div>
-                <div id="vv-party" style="font-size: 10px; color: #64748B; font-weight: 800; margin-top: 4px;">PARTY</div>
-                <div style="font-size: 40px; margin: 15px 0;">✅</div>
-                <p style="font-size: 10px; font-weight: 950; color: #10B981;">✓ Verified</p>
-            </div>
-        </div>
+        <!-- Google Translate Widget (Hidden but active) -->
+        <div id="google_translate_element" style="display:none"></div>
     </div>
 
-    <script type="module" src="/src/main.ts"></script>
+    <!-- Test Panel -->
+    <section id="test-panel" style="display:none">
+        <h2>VoteReady Test Suite</h2>
+        <div id="test-output"></div>
+        <button class="btn btn-outline" style="color:white;border-color:white;margin-top:20px;" onclick="document.getElementById('test-panel').style.display='none'" aria-label="Close Test Panel">Close Tests</button>
+    </section>
+
+    <!-- Scripts -->
+    <script type="module" src="/src/app.js"></script>
+
+    <!-- Google Translate Script -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'hi,en', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
