@@ -28,6 +28,38 @@ function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }
   return null;
 }
 
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://z.overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+
+async function fetchOverpassData(query: string) {
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: query
+      });
+      if (!res.ok) {
+        console.warn(`Overpass API ${endpoint} returned ${res.status}`);
+        continue;
+      }
+      const data = await res.json();
+      if (data && data.elements) {
+        return data;
+      }
+    } catch (err) {
+      console.warn(`Failed fetching from ${endpoint}`, err);
+    }
+  }
+  throw new Error('All Overpass API endpoints failed');
+}
+
 export default function BoothScreen() {
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
@@ -82,15 +114,13 @@ export default function BoothScreen() {
 
     try {
       const query1 = `[out:json];(node["amenity"="polling_station"](around:5000,${lat},${lon}););out body;>;out skel qt;`;
-      const res1 = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: query1 });
-      const data1 = await res1.json();
+      const data1 = await fetchOverpassData(query1);
       
       let foundBooths = data1.elements.filter((e: any) => e.tags && e.tags.name);
 
       if (foundBooths.length === 0) {
         const query2 = `[out:json];(node["amenity"="school"](around:3000,${lat},${lon});node["amenity"="community_centre"](around:3000,${lat},${lon}););out body;>;out skel qt;`;
-        const res2 = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: query2 });
-        const data2 = await res2.json();
+        const data2 = await fetchOverpassData(query2);
         foundBooths = data2.elements.filter((e: any) => e.tags && e.tags.name);
       }
 
